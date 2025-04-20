@@ -1,1 +1,5 @@
-fastapi[all]
+fastapi
+uvicorn
+python-dotenv
+requests
+huggingface_hub

@@ -5,8 +5,16 @@ import re
 from dotenv import load_dotenv
 
 # 🌱 Load environment variables
-load_dotenv()
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+from dotenv import dotenv_values
+from io import StringIO
+
+# Parse multi-line TOKENS env secret
+tokens_raw = os.getenv("TOKENS")
+if tokens_raw:
+    env_vars = dotenv_values(stream=StringIO(tokens_raw))
+    GROQ_API_KEY = env_vars.get("GROQ_API_KEY")
+else:
+    raise EnvironmentError("TOKENS secret not found in environment.")
 
 LLAMA_MODEL = "llama3-8b-8192"
 DEEPSEEK_MODEL = "deepseek-r1-distill-llama-70b"

@@ -4,8 +4,16 @@ from dotenv import load_dotenv
 import os
 import json
 
-load_dotenv()
-HF_TOKEN = os.getenv("HF_TOKEN")
+from dotenv import dotenv_values
+from io import StringIO
+
+# Parse multi-line TOKENS env secret
+tokens_raw = os.getenv("TOKENS")
+if tokens_raw:
+    env_vars = dotenv_values(stream=StringIO(tokens_raw))
+    HF_TOKEN = env_vars.get("HF_TOKEN")
+else:
+    raise EnvironmentError("TOKENS secret not found in environment.")
 
 # Download questions from Hugging Face
 questions_file_path = hf_hub_download(

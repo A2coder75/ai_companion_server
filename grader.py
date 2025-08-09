@@ -163,13 +163,14 @@ def evaluate_answer_batch(batch: list) -> str:
         correct_answer = data["correct_answer"]
         marks = data["marks"]
         qtype = data["question_type"]
+        question = data["question_text"]
 
         # Create individual evaluation block
         prompt_sections.append(f"""
 --------------------------
 
 📘 Question Number: {question_number} | Section: {section}
-
+Question: {question}
 🧠 Question Type: {qtype}  
 🔢 Total Marks: {marks}
 
@@ -206,7 +207,8 @@ For each question, strictly follow the rules below:
 
 💡 Output must be a strict valid JSON array named `evaluations`, like below:
 the mistake return should contain what part of the answer was wrong and why
-Also, mistake types can only be conceptual (if the concept is wrongly explained), calculation (if the numerical answer is wrong), interpretation (if the question was wrongly read or understood), careless (if the unit was missing or some other detail that was missed) and procedure (steps not shown or points not written)
+Also, mistake types can only be conceptual (if the concept is wrongly explained) and calculation (if the numerical answer is wrong), interpretation (if the question was wrongly read or understood), 
+Also include a feedback field where you explain the answer and ask the student to improve in the area where he did the mistake
 Each evaluation object MUST include a "verdict" field:
 - Set to "correct" if full marks were awarded.
 - Set to "wrong" if anything was deducted, even partially.
@@ -217,6 +219,8 @@ This field is mandatory. Do not skip it. U MUST MENTION THE VERDICT FIELD
     {{
       "question_number": "2(i)(b)",
       "section": "A",
+      "question": (question from question given)
+      "type": (question type given)
       "verdict": "wrong",
       "marks_awarded": 0,
       "mistake": "Class I Lever was wrong identification because of wrong concept",
@@ -224,15 +228,19 @@ This field is mandatory. Do not skip it. U MUST MENTION THE VERDICT FIELD
         "Class II lever"
       ],
       "mistake_type": "conceptual"
+      "feedback": "This is a class II lever because (your explanation). Student needs to focus on these areas (proceed to give areas of weakness)",
     }},
     {{
       "question_number": "2(ii)(a)",
       "section": "A",
+      "question": (question from question given)
+      "type": (question type given)      
       "marks_awarded": 1,
       "verdict": "correct",
       "mistake": [],
       "correct_answer": (answer from answer key),
       "mistake_type": []
+      "feedback": []
     }}
   ]
 }}

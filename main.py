@@ -42,9 +42,20 @@ class PlannerRequest(BaseModel):
     start_date: List[int]
 
 # Route: Get Questions
-@app.get("/questions/{filename}")
-def fetch_questions(filename: str):
-    return get_questions(filename)
+@app.post("/questions")
+def fetch_questions(payload: dict = Body(...)):
+    filename = payload.get("filename")
+    result = get_questions(filename)
+    if "error" in result:
+        return result
+    return {
+        "fields": result["fields"],
+        "pdf_url": f"/download_pdf?path={result['pdf_path']}"
+    }
+
+@app.get("/download_pdf")
+def download_pdf(path: str):
+    return FileResponse(path, media_type="application/pdf", filename="qpaper.pdf")
 
 # Route: Grade batch only
 @app.post("/grade_batch")
@@ -81,3 +92,4 @@ def generate_planner(req: PlannerRequest):
             "details": str(e),
             "raw_response": raw_response
         }
+

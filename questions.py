@@ -1,38 +1,30 @@
-import json
-import os
-from huggingface_hub import hf_hub_download
-from dotenv import load_dotenv
+import requests
+from typing import Dict
 
-# Load environment variables
-load_dotenv()
-HF_TOKEN = os.getenv("HF_TOKEN")
-
-def get_questions(filename: str):
+def get_questions(filename: str) -> Dict:
     """
-    Fetch fields.json from Hugging Face repo QnA_All 
-    and return with the direct qpaper.pdf URL.
+    Fetch fields.json and return fields + PDF URL.
     """
     try:
-        # Download fields.json
-        fields_path = hf_hub_download(
-            repo_id="A2coder75/QnA_All",
-            repo_type="dataset",
-            filename=f"{filename}/fields.json",
-            token=HF_TOKEN
-        )
+        # Construct direct URLs
+        base_url = "https://huggingface.co/datasets/A2coder75/QnA_All/resolve/main"
+        json_url = f"{base_url}/{filename}/fields.json"
+        pdf_url = f"{base_url}/{filename}/qpaper.pdf"
 
-        with open(fields_path, "r", encoding="utf-8") as f:
-            fields_data = json.load(f)
+        # Fetch the JSON
+        resp = requests.get(json_url)
+        resp.raise_for_status()  # raise exception if 404 or other errors
 
-        # Construct direct PDF URL (public link)
-        pdf_url = (
-            f"https://huggingface.co/datasets/A2coder75/QnA_All/resolve/main/{filename}/qpaper.pdf"
-        )
+        fields_data = resp.json()  # parse JSON directly
+        if not isinstance(fields_data, list):
+            return {"error": "fields.json is invalid: not a list"}
 
         return {
             "fields": fields_data,
             "pdf_url": pdf_url
         }
 
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         return {"error": f"Failed to fetch questions: {str(e)}"}
+    except ValueError as e:
+        return {"error": f"Invalid JSON in fields.json: {str(e)}"}

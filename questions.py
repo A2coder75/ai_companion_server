@@ -1,30 +1,24 @@
-import requests
+from huggingface_hub import hf_hub_download
 from typing import Dict
+import json
 
 def get_questions(filename: str) -> Dict:
-    """
-    Fetch fields.json and return fields + PDF URL.
-    """
     try:
-        # Construct direct URLs
-        base_url = "https://huggingface.co/datasets/A2coder75/QnA_All/resolve/main"
-        json_url = f"{base_url}/{filename}/fields.json"
-        pdf_url = f"{base_url}/{filename}/qpaper.pdf"
+        # Download fields.json to a local temp path
+        fields_path = hf_hub_download(
+            repo_id="A2coder75/QnA_All",
+            repo_type="dataset",
+            filename=f"{filename}/fields.json"
+        )
 
-        # Fetch the JSON
-        resp = requests.get(json_url)
-        resp.raise_for_status()  # raise exception if 404 or other errors
+        # Load JSON from the downloaded file
+        with open(fields_path, "r", encoding="utf-8") as f:
+            fields_data = json.load(f)
 
-        fields_data = resp.json()  # parse JSON directly
-        if not isinstance(fields_data, list):
-            return {"error": "fields.json is invalid: not a list"}
+        # Construct direct PDF URL
+        pdf_url = f"https://huggingface.co/datasets/A2coder75/QnA_All/resolve/main/{filename}/qpaper.pdf"
 
-        return {
-            "fields": fields_data,
-            "pdf_url": pdf_url
-        }
+        return {"fields": fields_data, "pdf_url": pdf_url}
 
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         return {"error": f"Failed to fetch questions: {str(e)}"}
-    except ValueError as e:
-        return {"error": f"Invalid JSON in fields.json: {str(e)}"}

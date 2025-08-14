@@ -10,45 +10,41 @@ DEEPSEEK_MODEL = "deepseek-r1-distill-llama-70b"
 
 # Function to create the planner prompt based on user input
 def create_planner_prompt(req) -> str:
-    # Collect the relevant details from the request
     subjects = ', '.join(req.subjects)
     chapters = ', '.join(req.chapters)
     strengths = ', '.join(req.strengths)
     weaknesses = ', '.join(req.weaknesses)
-    days_until_target = req.days_until_target
-    time_available = req.time_available
-    days_per_week = req.days_per_week
-    start_date = req.start_date  # New field expected in the request
 
-    # Prepare the output text
     prompt = f"""
-You are an expert study planner for ICSE Class 10 students.
+You are an expert ICSE Class 10 study planner.
 
-Generate a personalized study schedule based on the following inputs:
+Generate a personalized study schedule based on these inputs:
 
 Subjects: {subjects}
 Chapters: {chapters}
 Study goals: {req.study_goals}
 Strengths: {strengths}
 Weaknesses: {weaknesses}
-Start date: {req.start_date} (YYYY/MM/DD format)
-Target date: {req.target} (YYYY/MM/DD format)
+Start date: {req.start_date} (YYYY/MM/DD)
+Target date: {req.target} (YYYY/MM/DD)
 Time available per day: {req.time_available} hours
 Days until the exam: {req.days_until_target}
 Days available to study in a week: {req.days_per_week}
 
-Create a study plan that:
-- Begins from the start_date and ends at the target_date.
-- Distributes subjects and chapters realistically based on {req.days_per_week} study days per week.
-- Ensures that the dates in the plan match only the number of days available to study in a week.
-- If the full syllabus can be covered before the target date, do so, and allocate remaining time for smart revision and buffer.
-- Adds a 20-minute break between any two consecutive sessions to avoid burnout.
-
-Return ONLY a **pure JSON object** in this exact format:
-DO NOT INCLUDE ANY TEXT IN THE BEGINNING OR THE END. ALL I SHOULD GET IS A JSON WITHIN A STRING
+Important instructions:
+1. **Use real calendar weeks**. A week starts on Monday and ends on Sunday.  
+   - Only include days when the student is available to study (as per `days_per_week`).
+   - Assign tasks in chronological order within each week.
+2. **Week numbering should match real weeks**:
+   - Week 1 = the week containing the start date (Monday → Sunday)
+   - Week 2 = the following calendar week, and so on.
+3. Each study day can have 1–3 tasks depending on available time, with a 20-minute break between sessions.
+4. If the syllabus completes early, allocate remaining time for smart revision or buffer.
+5. Return ONLY a **JSON object**, no extra text.
+6. Example format:
 ```json
 {{
-  "target_date": "2025-06-15",
+  "target_date": "{req.target}",
   "study_plan": [
     {{
       "week_number": 1,
@@ -74,35 +70,17 @@ DO NOT INCLUDE ANY TEXT IN THE BEGINNING OR THE END. ALL I SHOULD GET IS A JSON 
               "status": "pending"
             }}
           ]
-        }},
-        {{
-          "date": "2025-04-16",
-          "tasks": [
-            {{
-              "subject": "Chemistry",
-              "chapter": "Periodic Table",
-              "task_type": "learning",
-              "estimated_time": 80,
-              "status": "pending"
-            }},
-            {{
-              "break": 20
-            }},
-            {{
-              "subject": "Physics",
-              "chapter": "Work, Power, Energy",
-              "task_type": "revision",
-              "estimated_time": 70,
-              "status": "pending"
-            }}
-          ]
         }}
       ]
     }}
   ]
 }}
-Each study day should include 1–3 tasks depending on available time, and must include a 20-minute break between two sessions. Ensure that all scheduled dates fall only on the available study days per week. """
+Make sure:
+- Days in each week are in real chronological order.
+- Tasks within a day are in the order they should be done.
+- Weeks correspond to actual calendar weeks (Monday → Sunday)."""
     return prompt
+
 
 
 
@@ -127,4 +105,5 @@ def ask_groq_api(prompt: str, model: str) -> str:
         return data["choices"][0]["message"]["content"].strip()
     except Exception as e:
         return f"❌ Error: {str(e)}"
+
 

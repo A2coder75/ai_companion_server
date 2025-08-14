@@ -187,9 +187,13 @@ Rules:
    - Award 0 only if neither the letter nor meaning matches.
 
 2. For Numericals:
-   - Award full marks if the numerical value matches exactly (ignore formatting differences like `10` vs `10.0`).
-   - Units must match, but allow acceptable equivalent units (e.g., `m/s` vs `ms^-1`).
-   - Award partial marks if the method is correct but there is a small arithmetic slip.
+   - Award full marks ONLY if the numerical value matches exactly within a strict tolerance:
+     * If the correct answer ≤ 10: difference must be ≤ 0.005
+     * If the correct answer > 10: difference must be ≤ 0.01
+   - Units must match exactly or be equivalent (e.g., `m/s` vs `ms^-1`).
+   - If the method is correct but the numerical is outside tolerance, award 0 marks unless partial marks are specified in the question paper.
+   - Do NOT award marks for approximately correct answers unless within tolerance.
+
 
 3. For Descriptive/Short Answer:
    - Award marks for **conceptual correctness** even if wording differs from the key.
@@ -231,6 +235,109 @@ Rules:
 {question_blocks}
 """
 
+
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+def evaluate_answer_batch(batch: list) -> str:
+    prompt_sections = []
+    total_possible = 0
+
+    for item in batch:
+        section = item["section"]
+        question_number = item["question_number"]
+        student_answer = item["student_answer"]
+
+        data = get_answer_for_question(section, question_number)
+        if "error" in data:
+            prompt_sections.append(f"❌ Question {question_number} Error: {data['error']}")
+            continue
+
+        correct_answer = data["correct_answer"]
+        marks = data["marks"]
+        total_possible += marks
+        qtype = data["question_type"]
+        question = data["question_text"]
+
+        prompt_sections.append(f"""
+--------------------------
+
+📘 Question Number: {question_number} | Section: {section}
+Question: {question}
+🧠 Question Type: {qtype}  
+🔢 Total Marks: {marks}
+
+✅ **Answer Key**:  
+{correct_answer}
+
+✍️ **Student Answer**:  
+{student_answer}
+""")
+
+    question_blocks = "\n".join(prompt_sections)
+
+    full_prompt = f"""
+You are an ICSE Class 10 Physics board examiner.
+
+Use the **official answer key ONLY** to evaluate each student’s response.
+
+Rules:
+1. For MCQ/Objective:
+   - Award full marks if the option letter OR the text matches (case-insensitive, trim spaces/parentheses).
+   - Ignore punctuation and minor spelling mistakes.
+   - Award 0 only if neither the letter nor meaning matches.
+
+2. For Numericals:
+   - Award full marks ONLY if the numerical value matches exactly within a strict tolerance:
+     * If the correct answer ≤ 10: difference must be ≤ 0.005
+     * If the correct answer > 10: difference must be ≤ 0.01
+   - Units must match exactly or be equivalent (e.g., `m/s` vs `ms^-1`).
+   - If the value is outside tolerance, award 0 marks unless partial marks are explicitly stated in the marking scheme.
+
+3. For Descriptive/Short Answer:
+   - Award marks for **conceptual correctness** even if wording differs from the key.
+   - Accept synonyms or paraphrased expressions of the same meaning.
+   - If the question has multiple subparts or expects multiple points, award marks proportionally to the number of correct points.
+   - Do NOT deduct marks for extra irrelevant information unless it directly contradicts the answer.
+
+4. Output must be valid JSON with this structure:
+
+{{
+  "evaluations": [
+    {{
+      "question_number": "2(i)(b)",
+      "section": "A",
+      "question": "What type of lever is this?",
+      "type": "MCQ",
+      "verdict": "wrong",
+      "marks_awarded": 0,
+      "total_marks": 1,
+      "mistake": "Class I Lever was wrong identification because of wrong concept",
+      "correct_answer": ["Class II lever"],
+      "mistake_type": "conceptual",
+      "feedback": "This is a class II lever because the load lies between the fulcrum and effort. Review the lever classes."
+    }},
+    {{
+      "question_number": "2(ii)(a)",
+      "section": "A",
+      "question": "State one use of a concave mirror.",
+      "type": "Objective",
+      "marks_awarded": 1,
+      "total_marks": 1,
+      "verdict": "correct",
+      "mistake": [],
+      "correct_answer": "Used as a shaving mirror",
+      "mistake_type": [],
+      "feedback": []
+    }}
+  ],
+  "total_marks_awarded": <sum of marks_awarded>,
+  "total_marks_possible": {total_possible}
+}}
+
+{question_blocks}
+"""
 
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",

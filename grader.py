@@ -206,6 +206,7 @@ Use the **official answer key ONLY** to evaluate each student’s response.
 - Units must match exactly or be equivalent (e.g., `m/s` vs `ms^-1`).
 - If multiple numerical values are required (multi-part question):
   - Award proportional marks based on the number of correct values.
+- ignore spaces. 1cm is the same as 1 cm (for example)
 - If the method is correct but the numerical value is outside tolerance, award partial marks only if some parts are correct as per the marking scheme.
 - Example: If total marks = 3 and 2 out of 3 required values are correct, award 2 marks.
 
@@ -219,9 +220,7 @@ Use the **official answer key ONLY** to evaluate each student’s response.
 - If some but not all key concepts are present:
   - Award proportional marks based on the number of correct concepts.
 - Only award 0 if the meaning is incorrect or required concepts are missing.
-- Example:  
-  Official: `"Angle of incidence, Refractive index"`  
-  Student: `"Angle of prism, refractive index of prism"` → Award partial marks for the correct concept `"Refractive index"`.
+- Use your brain, you know if the meaning of an answer matches that of an answer key
 
 ---
 
@@ -386,6 +385,7 @@ Now evaluate these answers:
         return extract_json(response.json()["choices"][0]["message"]["content"]).strip()
     except Exception as e:
         return f"❌ Error: {str(e)}\n\n{response.text}"
+
 
 
 

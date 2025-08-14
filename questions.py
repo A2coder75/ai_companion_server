@@ -9,9 +9,8 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 
 def get_questions(filename: str):
     """
-    Fetch two files from Hugging Face repo QnA_All:
-    1. filename/fields.json
-    2. filename/qpaper.pdf
+    Fetch fields.json from Hugging Face repo QnA_All 
+    and return with the direct qpaper.pdf URL.
     """
     try:
         # Download fields.json
@@ -21,22 +20,19 @@ def get_questions(filename: str):
             filename=f"{filename}/fields.json",
             token=HF_TOKEN
         )
+
         with open(fields_path, "r", encoding="utf-8") as f:
             fields_data = json.load(f)
 
-        # Download qpaper.pdf
-        pdf_path = hf_hub_download(
-            repo_id="A2coder75/QnA_All",
-            repo_type="dataset",
-            filename=f"{filename}/qpaper.pdf",
-            token=HF_TOKEN
+        # Construct direct PDF URL (public link)
+        pdf_url = (
+            f"https://huggingface.co/datasets/A2coder75/QnA_All/resolve/main/{filename}/qpaper.pdf"
         )
 
-        # Return both
         return {
             "fields": fields_data,
-            "pdf_path": pdf_path  # Can be sent as a file in Flask/FastAPI response
+            "pdf_url": pdf_url
         }
 
     except Exception as e:
-        return {"error": f"Failed to fetch files: {str(e)}"}
+        return {"error": f"Failed to fetch questions: {str(e)}"}

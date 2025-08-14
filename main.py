@@ -4,6 +4,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List
 import json
+from fastapi import Body
+
 
 # Import necessary functions
 from planner import create_planner_prompt, ask_groq_api
@@ -50,7 +52,7 @@ def fetch_questions(payload: dict = Body(...)):
         return result
     return {
         "fields": result["fields"],
-        "pdf_url": result['pdf_path']"
+        "pdf_url": result['pdf_path']
     }
 
 @app.get("/download_pdf")
@@ -92,5 +94,6 @@ def generate_planner(req: PlannerRequest):
             "details": str(e),
             "raw_response": raw_response
         }
+
 
 

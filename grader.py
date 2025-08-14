@@ -180,31 +180,52 @@ You are an ICSE Class 10 Physics board examiner.
 
 Use the **official answer key ONLY** to evaluate each student’s response.
 
-Rules:
-1. For MCQ/Objective:
-   - Award full marks if the option letter OR the text matches (case-insensitive, trim spaces/parentheses).
-   - Ignore punctuation and minor spelling mistakes.
-   - Award 0 only if neither the letter nor meaning matches.
+⚠️ Do NOT use any external physics knowledge outside the answer key unless it is to recognize synonyms or equivalent terms.
 
-2. For Numericals:
-   - Award full marks ONLY if the numerical value matches exactly within a strict tolerance:
-     * If the correct answer ≤ 10: difference must be ≤ 0.005
-     * If the correct answer > 10: difference must be ≤ 0.01
-   - Units must match exactly or be equivalent (e.g., `m/s` vs `ms^-1`).
-   - If the method is correct but the numerical is outside tolerance, award 0 marks unless partial marks are specified in the question paper.
-   - Do NOT award marks for approximately correct answers unless within tolerance.
-   - Have step marking if one part of the answer is right but the other is not
+---
 
+## Evaluation Rules:
 
-3. For Descriptive/Short Answer:
-   - Award marks for **conceptual correctness** even if wording differs from the key.
-   - If the answer does not match with the answer key but you think the answer is correct according to the question, mark them
-   - Accept synonyms or paraphrased expressions of the same meaning.
-   - If the question has multiple subparts or expects multiple points, award marks proportionally to the number of correct points.
-   - Do NOT deduct marks for extra irrelevant information unless it directly contradicts the answer.
+### 1. For MCQ / Objective Questions:
+- Normalize both student's and correct answers by:
+  - Lowercasing
+  - Trimming whitespace
+  - Removing parentheses
+- Award full marks if:
+  - The option letter matches OR
+  - The answer text matches in meaning (case-insensitive, ignoring punctuation and word order)
+- Minor spelling mistakes are acceptable if the meaning is preserved.
+- Award 0 only if neither the letter nor the meaning matches.
 
-4. Output must be valid JSON with this structure:
+---
 
+### 2. For Numerical Answers:
+- Compare using **strict numerical tolerance**:
+  * If correct answer ≤ 10: difference must be ≤ 0.005  
+  * If correct answer > 10: difference must be ≤ 0.01  
+- Units must match exactly or be equivalent (e.g., `m/s` vs `ms^-1`).
+- If multiple numerical values are required (multi-part question):
+  - Award proportional marks based on the number of correct values.
+- If the method is correct but the numerical value is outside tolerance, award partial marks only if some parts are correct as per the marking scheme.
+- Example: If total marks = 3 and 2 out of 3 required values are correct, award 2 marks.
+
+---
+
+### 3. For Descriptive / Short Answers:
+- **First**, check if the student’s answer has the same meaning as the official key, even if words differ.
+- Accept synonyms, alternate phrasings, plural/singular changes, and differences in word order.
+- Ignore articles ("the", "a", "an") and filler words.
+- Award full marks if **all key concepts** from the official answer are present, even if there are extra irrelevant words.
+- If some but not all key concepts are present:
+  - Award proportional marks based on the number of correct concepts.
+- Only award 0 if the meaning is incorrect or required concepts are missing.
+- Example:  
+  Official: `"Angle of incidence, Refractive index"`  
+  Student: `"Angle of prism, refractive index of prism"` → Award partial marks for the correct concept `"Refractive index"`.
+
+---
+
+### Output JSON Format:
 {{
   "evaluations": [
     {{
@@ -214,6 +235,7 @@ Rules:
       "type": "MCQ",
       "verdict": "wrong",
       "marks_awarded": 0,
+      "total_marks": 1,
       "mistake": "Class I Lever was wrong identification because of wrong concept",
       "correct_answer": ["Class II lever"],
       "mistake_type": "conceptual",
@@ -225,17 +247,24 @@ Rules:
       "question": "State one use of a concave mirror.",
       "type": "Objective",
       "marks_awarded": 1,
+      "total_marks": 1,
       "verdict": "correct",
       "mistake": [],
       "correct_answer": "Used as a shaving mirror",
       "mistake_type": [],
       "feedback": []
     }}
-  ]
+  ],
+  "total_marks_awarded": <sum of marks_awarded>,
+  "total_marks_possible": {total_possible}
 }}
 
+---
+
+Now evaluate these answers:
 {question_blocks}
 """
+
 
 
     headers = {
@@ -359,5 +388,6 @@ Rules:
         return extract_json(response.json()["choices"][0]["message"]["content"]).strip()
     except Exception as e:
         return f"❌ Error: {str(e)}\n\n{response.text}"
+
 
 

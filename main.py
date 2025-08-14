@@ -50,7 +50,7 @@ def fetch_questions(payload: dict = Body(...)):
         return result
     return {
         "fields": result["fields"],
-        "pdf_url": f"/download_pdf?path={result['pdf_path']}"
+        "pdf_url": result['pdf_path']"
     }
 
 @app.get("/download_pdf")
@@ -92,4 +92,5 @@ def generate_planner(req: PlannerRequest):
             "details": str(e),
             "raw_response": raw_response
         }
+
 

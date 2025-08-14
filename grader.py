@@ -193,10 +193,12 @@ Rules:
    - Units must match exactly or be equivalent (e.g., `m/s` vs `ms^-1`).
    - If the method is correct but the numerical is outside tolerance, award 0 marks unless partial marks are specified in the question paper.
    - Do NOT award marks for approximately correct answers unless within tolerance.
+   - Have step marking if one part of the answer is right but the other is not
 
 
 3. For Descriptive/Short Answer:
    - Award marks for **conceptual correctness** even if wording differs from the key.
+   - If the answer does not match with the answer key but you think the answer is correct according to the question, mark them
    - Accept synonyms or paraphrased expressions of the same meaning.
    - If the question has multiple subparts or expects multiple points, award marks proportionally to the number of correct points.
    - Do NOT deduct marks for extra irrelevant information unless it directly contradicts the answer.
@@ -357,4 +359,5 @@ Rules:
         return extract_json(response.json()["choices"][0]["message"]["content"]).strip()
     except Exception as e:
         return f"❌ Error: {str(e)}\n\n{response.text}"
+
 

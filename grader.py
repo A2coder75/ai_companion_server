@@ -308,67 +308,65 @@ Question: {question}
 
     question_blocks = "\n".join(prompt_sections)
 
-    full_prompt = f"""
+   full_prompt = f"""
 You are an ICSE Class 10 Physics board examiner.
 
 Use the **official answer key ONLY** to evaluate each student’s response.
+Award **full, partial, or zero marks** depending on how many correct elements are present.
 
-Rules:
-1. For MCQ/Objective:
-   - Award full marks if the option letter OR the text matches (case-insensitive, trim spaces/parentheses).
-   - Ignore punctuation and minor spelling mistakes.
-   - Award 0 only if neither the letter nor meaning matches.
+---
 
-2. For Numericals:
-   - Award full marks ONLY if the numerical value matches exactly within a strict tolerance:
-     * If the correct answer ≤ 10: difference must be ≤ 0.005
-     * If the correct answer > 10: difference must be ≤ 0.01
-   - Units must match exactly or be equivalent (e.g., `m/s` vs `ms^-1`).
-   - If the value is outside tolerance, award 0 marks unless partial marks are explicitly stated in the marking scheme.
+## Marking Rules with Partial Credit:
 
-3. For Descriptive/Short Answer:
-   - Award marks for **conceptual correctness** even if wording differs from the key.
-   - Accept synonyms or paraphrased expressions of the same meaning.
-   - If the question has multiple subparts or expects multiple points, award marks proportionally to the number of correct points.
-   - Do NOT deduct marks for extra irrelevant information unless it directly contradicts the answer.
+1. **MCQ / Objective**
+   - If only one correct option exists: full marks if correct, 0 if wrong.
+   - If the question expects multiple correct choices (multi-correct MCQ), award marks proportionally: (number of correct options chosen by student) / (total correct options) × total marks.
 
-4. Output must be valid JSON with this structure:
+2. **Numerical**
+   - Break the official answer into all required **distinct numerical values** (including units).
+   - Award marks per correct value:  
+     `marks_awarded = (number of correct values) / (total values) × total_marks`
+   - Correct means:
+     * Numerical match within tolerance (≤0.005 if ≤10, ≤0.01 if >10)
+     * Units match exactly or are equivalent
+   - If method is correct but calculation is slightly wrong, still award method marks if marking scheme allows.
 
+3. **Descriptive / Short Answer**
+   - Break the official answer into **key concepts or facts**.
+   - Award proportional marks:  
+     `marks_awarded = (number of correct concepts) / (total concepts) × total_marks`
+   - A concept counts as correct if:
+     * Meaning matches exactly (case-insensitive, synonyms allowed)
+     * Minor grammar/spelling differences are ignored
+   - Extra irrelevant text does not lose marks unless it contradicts the answer.
+
+---
+
+### Output Format:
 {{
   "evaluations": [
     {{
-      "question_number": "2(i)(b)",
-      "section": "A",
-      "question": "What type of lever is this?",
-      "type": "MCQ",
-      "verdict": "wrong",
-      "marks_awarded": 0,
-      "total_marks": 1,
-      "mistake": "Class I Lever was wrong identification because of wrong concept",
-      "correct_answer": ["Class II lever"],
-      "mistake_type": "conceptual",
-      "feedback": "This is a class II lever because the load lies between the fulcrum and effort. Review the lever classes."
-    }},
-    {{
-      "question_number": "2(ii)(a)",
-      "section": "A",
-      "question": "State one use of a concave mirror.",
-      "type": "Objective",
-      "marks_awarded": 1,
-      "total_marks": 1,
-      "verdict": "correct",
-      "mistake": [],
-      "correct_answer": "Used as a shaving mirror",
-      "mistake_type": [],
-      "feedback": []
+      "question_number": "4(i)",
+      "section": "B",
+      "question": "The image of a candle flame ...",
+      "type": "numerical",
+      "verdict": "partially correct",
+      "marks_awarded": 2,
+      "total_marks": 3,
+      "mistake": "Power calculation was wrong",
+      "correct_answer": ["f = 24 cm", "P = 4.16 D"],
+      "mistake_type": "numerical",
+      "feedback": "Focal length correct, but power was miscalculated."
     }}
   ],
-  "total_marks_awarded": <sum of marks_awarded>,
+  "total_marks_awarded": <sum>,
   "total_marks_possible": {total_possible}
 }}
 
+Now evaluate these answers:
 {question_blocks}
 """
+
 
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
@@ -388,6 +386,7 @@ Rules:
         return extract_json(response.json()["choices"][0]["message"]["content"]).strip()
     except Exception as e:
         return f"❌ Error: {str(e)}\n\n{response.text}"
+
 
 
 

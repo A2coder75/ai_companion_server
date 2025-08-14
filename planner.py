@@ -225,39 +225,63 @@ def _date_range_key(dstr: str) -> Tuple[str, str]:
 
 
 def validate_and_fix_calendar_weeks(plan: Dict[str, Any]) -> Dict[str, Any]:
-    """Regroup days into true Monday–Sunday weeks and renumber from 0.
-
-    Expected input schema (from the model):
-      {"target_date": "YYYY-MM-DD", "study_plan": [ {"week_number": int, "days": [ {"date": "YYYY-MM-DD", ...} ] }, ... ] }
+    """Regroup days into true Monday–Sunday weeks and renumber from 0,
+    anchored to the Monday of the plan's first study date.
     """
     if not isinstance(plan, dict) or "study_plan" not in plan:
         return plan
 
-    # Collect all days and map by calendar week window
-    buckets: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    # Flatten all days from all weeks
+    all_days: List[Dict[str, Any]] = []
     for wk in plan.get("study_plan", []):
         for day in wk.get("days", []):
-            dstr = day.get("date")
-            if not dstr:
-                continue
-            key = _date_range_key(dstr)
-            buckets.setdefault(key, []).append(day)
+            if "date" in day:
+                all_days.append(day)
 
-    # Sort buckets by week-start (Monday)
-    sorted_keys = sorted(buckets.keys(), key=lambda k: k[0])
+    # Sort days by actual date
+    try:
+        all_days.sort(key=lambda d: datetime.strptime(d["date"], "%Y-%m-%d").date())
+    except Exception:
+        return plan  # if invalid date format, return as-is
 
-    # Within each bucket, sort days by date
+    if not all_days:
+        return plan
+
+    # Anchor week 0 to Monday of first date
+    start_date = datetime.strptime(all_days[0]["date"], "%Y-%m-%d").date()
+    current_week_monday = monday_of(start_date)
+    current_week_number = 0
+
     new_plan_blocks = []
-    for idx, key in enumerate(sorted_keys):
-        days = sorted(buckets[key], key=lambda d: d.get("date", ""))
+    current_week_days = []
+
+    for day in all_days:
+        d = datetime.strptime(day["date"], "%Y-%m-%d").date()
+        d_monday = monday_of(d)
+
+        if d_monday != current_week_monday:
+            # Finish previous week block
+            new_plan_blocks.append({
+                "week_number": current_week_number,
+                "days": current_week_days
+            })
+            # Start new week
+            current_week_number += 1
+            current_week_monday = d_monday
+            current_week_days = []
+
+        current_week_days.append(day)
+
+    # Append last week
+    if current_week_days:
         new_plan_blocks.append({
-            "week_number": idx,  # Renumber from 0
-            "days": days,
+            "week_number": current_week_number,
+            "days": current_week_days
         })
 
-    # Replace study_plan
     plan["study_plan"] = new_plan_blocks
     return plan
+
 
 # ------------------------------
 # High-level helper
@@ -277,3 +301,4 @@ def get_plan(req_dict: Dict[str, Any]) -> Dict[str, Any]:
     # Validate / fix calendar weeks
     fixed = validate_and_fix_calendar_weeks(parsed)
     return fixed
+

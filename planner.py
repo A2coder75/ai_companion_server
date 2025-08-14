@@ -1,147 +1,279 @@
-import os
-from dotenv import load_dotenv
-import requests
+"""
+Calendar-True Study Planner
+- Enforces **real** Monday–Sunday calendar weeks via prompt + post-processing.
+- Works with Groq's Chat Completions API (LLAMA models, e.g., llama3-8b-8192).
 
-# 🌱 Load environment variables
+Usage:
+  - Set GROQ_API_KEY in your environment.
+  - Call get_plan(req_dict) → returns validated JSON dict.
+
+This script does **two** things so the AI stops making week-number mistakes:
+1) Strengthened prompt: forces the model to assign week_number by real calendar Monday–Sunday windows (start at week 0).
+2) Validator/Regrouper: after the model returns JSON, we re-check every date and regroup them into correct calendar weeks, renumbered from week 0.
+"""
+from __future__ import annotations
+
+import os
+import json
+import re
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
+from typing import List, Dict, Any, Optional, Tuple
+
+import requests
+from dotenv import load_dotenv
+
+# ------------------------------
+# Config
+# ------------------------------
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-LLAMA_MODEL = "llama3-8b-8192"
+LLAMA_MODEL = os.getenv("LLAMA_MODEL", "llama3-8b-8192")
+GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
 
-def create_planner_prompt(req) -> str:
-    subjects = ', '.join(req.subjects)
-    chapters = ', '.join(req.chapters)
-    strengths = ', '.join(req.strengths)
-    weaknesses = ', '.join(req.weaknesses)
+# ------------------------------
+# Data Model
+# ------------------------------
+@dataclass
+class StudentRequest:
+    subjects: List[str]
+    chapters: List[str]
+    study_goals: str
+    strengths: List[str]
+    weaknesses: List[str]
+    time_available: int
+    target: List[int]  # [YYYY, M, D]
+    days_until_target: int
+    days_per_week: List[str]  # e.g., ["monday", "wednesday", ...]
+    start_date: List[int]     # [YYYY, M, D]
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "StudentRequest":
+        return cls(
+            subjects=d["subjects"],
+            chapters=d["chapters"],
+            study_goals=d.get("study_goals", ""),
+            strengths=d.get("strengths", []),
+            weaknesses=d.get("weaknesses", []),
+            time_available=int(d["time_available"]),
+            target=list(d["target"]),
+            days_until_target=int(d["days_until_target"]),
+            days_per_week=list(d["days_per_week"]),
+            start_date=list(d["start_date"]),
+        )
+
+# ------------------------------
+# Date Helpers
+# ------------------------------
+WEEKDAY_TO_NAME = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+
+def to_date(parts: List[int]) -> date:
+    return date(parts[0], parts[1], parts[2])
+
+
+def monday_of(d: date) -> date:
+    return d - timedelta(days=d.weekday())  # Monday = 0
+
+
+def sunday_of(d: date) -> date:
+    return monday_of(d) + timedelta(days=6)
+
+
+def iso(d: date) -> str:
+    return d.isoformat()
+
+
+# ------------------------------
+# Prompt Builder
+# ------------------------------
+
+def create_planner_prompt(req: StudentRequest) -> str:
+    subjects = ", ".join(req.subjects)
+    chapters = ", ".join(req.chapters)
+    strengths = ", ".join(req.strengths)
+    weaknesses = ", ".join(req.weaknesses)
+
+    start = to_date(req.start_date)
+    target = to_date(req.target)
+    wk0_start = monday_of(start)
+    wk0_end = sunday_of(start)
+    wk1_start = wk0_start + timedelta(days=7)
+    wk1_end = wk1_start + timedelta(days=6)
+
+    # Example dates to anchor the model in the **actual** calendar
+    example_mapping = (
+        f"Start date {iso(start)} falls in calendar week: {iso(wk0_start)} to {iso(wk0_end)} — this is \"week_number\": 0.\n"
+        f"The next calendar week begins on {iso(wk1_start)} and ends on {iso(wk1_end)} — this is \"week_number\": 1."
+    )
+
+    # JSON example needs escaped braces inside f-string
+    example_json = (
+        '{\n'
+        '  "target_date": "' + iso(target) + '",\n'
+        '  "study_plan": [\n'
+        '    {\n'
+        '      "week_number": 0,\n'
+        '      "days": [\n'
+        '        { "date": "' + iso(start) + '", "tasks": [] }\n'
+        '      ]\n'
+        '    },\n'
+        '    {\n'
+        '      "week_number": 1,\n'
+        '      "days": [\n'
+        '        { "date": "' + iso(wk1_start) + '", "tasks": [] }\n'
+        '      ]\n'
+        '    }\n'
+        '  ]\n'
+        '}'
+    )
 
     prompt = f"""
-You are an expert ICSE Class 10 study planner. Your job is to create a highly detailed, realistic study plan.
+You are an expert ICSE Class 10 study planner. Generate a highly detailed, realistic plan.
 
-Here is all the information about the student:
+STUDENT INFO
+- Subjects: {subjects}
+- Chapters: {chapters}
+- Study goals: {req.study_goals}
+- Strengths: {strengths}
+- Weaknesses: {weaknesses}
+- Start date (YYYY-MM-DD): {iso(start)}
+- Target date (YYYY-MM-DD): {iso(target)}
+- Time available per study day: {req.time_available} minutes
+- Days until target: {req.days_until_target}
+- Allowed study days each week (lowercase): {', '.join(req.days_per_week)}
 
-Subjects: {subjects}
-Chapters: {chapters}
-Study goals: {req.study_goals}
-Strengths: {strengths}
-Weaknesses: {weaknesses}
-Start date: {req.start_date} (YYYY/MM/DD)
-Target date: {req.target} (YYYY/MM/DD)
-Time available per day: {req.time_available} minutes
-Days until the exam: {req.days_until_target}
-Days available to study in a week: {req.days_per_week}
+CRITICAL: CALENDAR WEEK GROUPING (STRICT)
+1) A week is **always** Monday–Sunday.
+2) Use **week_number starting at 0**: week 0 = calendar week that contains the start date; week 1 = the next Monday–Sunday; etc.
+3) How to assign week_number:
+   - First list **all study dates** in chronological order using only the allowed weekdays.
+   - For each date, determine its calendar Monday–Sunday window. Assign week_number by that window.
+   - Do **not** increment week_number based on the count of study days. Only increment when the **calendar Monday** changes.
+4) Sorting: Group by week_number, then sort days by date ascending. Week numbers must be contiguous 0,1,2,... (no gaps).
+5) Do **not** merge dates from different Monday–Sunday windows into the same week, and do **not** split a window across multiple week_number blocks.
 
-Important rules you must follow:
+Anchor to the actual calendar for this student:
+{example_mapping}
 
-1. **Calendar weeks**:
-   - A week starts on Monday and ends on Sunday.
-   - Week 1 is the calendar week containing the start date.
-   - Week 2 is the next Monday → Sunday, and so on until the target date.
-   - Assign each study day to the correct week_number according to the calendar.
+TASK RULES
+- Use only the allowed study days per week.
+- Each day may have 1–3 tasks, separated by a 20-minute break object: {{"break": 20}}.
+- Estimated times must fit within the per-day time budget.
+- Prioritize weaker subjects first, then strengths. Mix subjects across the week.
+- If syllabus completes early, allocate revision/buffer days.
 
-2. **Study days**:
-   - Only include days when the student is available to study (as per `days_per_week`).
-   - Tasks within each day must be in the order they should be completed.
-   - Each day can have 1–3 tasks depending on available time.
-   - Include a 20-minute break between tasks.
+OUTPUT RULES
+- Return **ONLY** a valid JSON object. No commentary.
+- Dates must be chronological and correctly grouped by calendar week_number.
+- Schema must follow exactly:
+{example_json}
+- Populate the tasks realistically for this student.
 
-3. **Task allocation**:
-   - Prioritize learning weak subjects first, then strengths.
-   - Mix subjects intelligently across the week (do not repeat same subject excessively).
-   - If syllabus is completed before the target date, allocate remaining days for **revision and buffer**.
-   - Tasks should be realistic: estimated_time in minutes must fit the student's available time per day.
+SELF-CHECK BEFORE ANSWERING (MANDATORY)
+- For each week block, compute the Monday and Sunday of every date in the block. They must all be identical Monday–Sunday ranges.
+- If any date is outside its block's Monday–Sunday, fix the grouping and renumber from week 0.
+- Ensure study_plan weeks are sorted by week_number and days sorted by date.
+"""
+    return prompt
 
-4. **Output rules**:
-   - Return **ONLY a JSON object**.
-   - Dates must increase chronologically and match the correct week_number.
-   - Do not skip or reorder dates outside the available study days.
-   - Example format (your output must follow this exactly):
+# ------------------------------
+# API Call
+# ------------------------------
 
-```json
-{{
-  "target_date": "{req.target}",
-  "study_plan": [
-    {{
-      "week_number": 1,
-      "days": [
-        {{
-          "date": "2025-04-15",
-          "tasks": [
-            {{
-              "subject": "Physics",
-              "chapter": "Force",
-              "task_type": "learning",
-              "estimated_time": 90,
-              "status": "pending"
-            }},
-            {{
-              "break": 20
-            }},
-            {{
-              "subject": "Math",
-              "chapter": "Quadratic Equations",
-              "task_type": "revision",
-              "estimated_time": 60,
-              "status": "pending"
-            }}
-          ]
-        }},
-        {{
-          "date": "2025-04-17",
-          "tasks": [
-            {{
-              "subject": "Chemistry",
-              "chapter": "Periodic Table",
-              "task_type": "learning",
-              "estimated_time": 80,
-              "status": "pending"
-            }},
-            {{
-              "break": 20
-            }},
-            {{
-              "subject": "Physics",
-              "chapter": "Work, Power, Energy",
-              "task_type": "revision",
-              "estimated_time": 70,
-              "status": "pending"
-            }}
-          ]
-        }}
-      ]
-    }}
-  ]
-}}
-Critical instructions:
+def ask_groq_api(prompt: str, model: str = LLAMA_MODEL, temperature: float = 0.2, max_tokens: int = 3500) -> str:
+    if not GROQ_API_KEY:
+        raise RuntimeError("GROQ_API_KEY not set in environment.")
 
-Do NOT merge tasks from different weeks into the same week_number.
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    resp = requests.post(GROQ_ENDPOINT, headers=headers, json=payload, timeout=60)
+    resp.raise_for_status()
+    data = resp.json()
+    return data["choices"][0]["message"]["content"].strip()
 
-Do NOT place dates out of order.
+# ------------------------------
+# Post-processing: Validate & Fix Week Grouping
+# ------------------------------
 
-Week_number must reflect the actual calendar week.
+def _extract_json(text: str) -> str:
+    """Extract the largest JSON object from a text blob."""
+    m = re.search(r"\{[\s\S]*\}$", text)
+    if m:
+        return m.group(0)
+    # Fallback: find first '{' and last '}'
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return text[start : end + 1]
+    return text
 
-Make sure the JSON is valid and parsable.
 
-Your output should be ready-to-use without modification.
+def _date_range_key(dstr: str) -> Tuple[str, str]:
+    d = datetime.strptime(dstr, "%Y-%m-%d").date()
+    ms = monday_of(d)
+    se = sunday_of(d)
+    return iso(ms), iso(se)
 
-Generate the study plan based on these rules, making it realistic, well-distributed, and properly segmented into calendar weeks."""
 
-return prompt"""
-def ask_groq_api(prompt: str, model: str) -> str:
-headers = {
-"Authorization": f"Bearer {GROQ_API_KEY}",
-"Content-Type": "application/json",
-}
-payload = {
-"model": model,
-"messages": [{"role": "user", "content": prompt}],
-"temperature": 0.3,
-"max_tokens": 3000,
-}
-try:
-response = requests.post(
-"https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload
-)
-response.raise_for_status()
-data = response.json()
-return data["choices"][0]["message"]["content"].strip()
-except Exception as e:
-return f"❌ Error: {str(e)}"
+def validate_and_fix_calendar_weeks(plan: Dict[str, Any]) -> Dict[str, Any]:
+    """Regroup days into true Monday–Sunday weeks and renumber from 0.
+
+    Expected input schema (from the model):
+      {"target_date": "YYYY-MM-DD", "study_plan": [ {"week_number": int, "days": [ {"date": "YYYY-MM-DD", ...} ] }, ... ] }
+    """
+    if not isinstance(plan, dict) or "study_plan" not in plan:
+        return plan
+
+    # Collect all days and map by calendar week window
+    buckets: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    for wk in plan.get("study_plan", []):
+        for day in wk.get("days", []):
+            dstr = day.get("date")
+            if not dstr:
+                continue
+            key = _date_range_key(dstr)
+            buckets.setdefault(key, []).append(day)
+
+    # Sort buckets by week-start (Monday)
+    sorted_keys = sorted(buckets.keys(), key=lambda k: k[0])
+
+    # Within each bucket, sort days by date
+    new_plan_blocks = []
+    for idx, key in enumerate(sorted_keys):
+        days = sorted(buckets[key], key=lambda d: d.get("date", ""))
+        new_plan_blocks.append({
+            "week_number": idx,  # Renumber from 0
+            "days": days,
+        })
+
+    # Replace study_plan
+    plan["study_plan"] = new_plan_blocks
+    return plan
+
+# ------------------------------
+# High-level helper
+# ------------------------------
+
+def get_plan(req_dict: Dict[str, Any]) -> Dict[str, Any]:
+    req = StudentRequest.from_dict(req_dict)
+    prompt = create_planner_prompt(req)
+    raw = ask_groq_api(prompt)
+
+    # Parse JSON safely
+    try:
+        parsed = json.loads(_extract_json(raw))
+    except Exception as e:
+        raise ValueError(f"Model did not return valid JSON: {e}\nRaw: {raw[:500]}")
+
+    # Validate / fix calendar weeks
+    fixed = validate_and_fix_calendar_weeks(parsed)
+    return fixed

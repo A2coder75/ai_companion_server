@@ -63,8 +63,9 @@ def fetch_questions(req: QuestionsRequest):
         return JSONResponse(content=result)
     return JSONResponse(content={
         "fields": result.get("fields", []),
-        "pdf_url": result.get("pdf_path", "")
+        "pdf_url": result.get("pdf_url", "")
     })
+
 
 # Route: Download PDF
 @app.get("/download_pdf")
@@ -114,3 +115,4 @@ def generate_planner(req: PlannerRequest):
 @app.get("/health")
 def health_check():
     return JSONResponse(content={"status": "ok"})
+

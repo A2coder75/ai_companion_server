@@ -181,11 +181,23 @@ You are an ICSE Class 10 Physics board examiner.
 Use the **official answer key ONLY** to evaluate each student’s response.
 
 Rules:
-1. For MCQ/Objective: award full marks if the option letter or text matches (case-insensitive, trim spaces/parentheses). Else 0.
-2. For Numericals: full marks only if value exactly matches (ignore commas) and units match. Else 0.
-3. For Descriptive: award partial/full marks if all key concepts match. Ignore extra info not in key.
+1. For MCQ/Objective:
+   - Award full marks if the option letter OR the text matches (case-insensitive, trim spaces/parentheses).
+   - Ignore punctuation and minor spelling mistakes.
+   - Award 0 only if neither the letter nor meaning matches.
 
-Output must be valid JSON with this structure:
+2. For Numericals:
+   - Award full marks if the numerical value matches exactly (ignore formatting differences like `10` vs `10.0`).
+   - Units must match, but allow acceptable equivalent units (e.g., `m/s` vs `ms^-1`).
+   - Award partial marks if the method is correct but there is a small arithmetic slip.
+
+3. For Descriptive/Short Answer:
+   - Award marks for **conceptual correctness** even if wording differs from the key.
+   - Accept synonyms or paraphrased expressions of the same meaning.
+   - If the question has multiple subparts or expects multiple points, award marks proportionally to the number of correct points.
+   - Do NOT deduct marks for extra irrelevant information unless it directly contradicts the answer.
+
+4. Output must be valid JSON with this structure:
 
 {{
   "evaluations": [
@@ -219,6 +231,7 @@ Output must be valid JSON with this structure:
 {question_blocks}
 """
 
+
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
@@ -237,3 +250,4 @@ Output must be valid JSON with this structure:
         return extract_json(response.json()["choices"][0]["message"]["content"]).strip()
     except Exception as e:
         return f"❌ Error: {str(e)}\n\n{response.text}"
+

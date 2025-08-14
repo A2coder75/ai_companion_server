@@ -209,8 +209,8 @@ Use the **official answer key ONLY** to evaluate each student’s response.
 - ignore spaces. 1cm is the same as 1 cm (for example)
 - If the method is correct but the numerical value is outside tolerance, award partial marks only if some parts are correct as per the marking scheme.
 - Example: If total marks = 3 and 2 out of 3 required values are correct, award 2 marks.
-- PLEASE AWARD PARTIAL MARKS IF ONE VALUE MATCHES AND ONE DOESN'T DONT GIVE A ZERO
-
+- PLEASE AWARD PARTIAL MARKS IF ONE VALUE MATCHES AND ONE DOESN'T, DONT GIVE A ZERO
+- If one value is correct, and the other isnt, give proportionate part marking. THIS IS COMPULSORY
 ---
 
 ### 3. For Descriptive / Short Answers:
@@ -386,6 +386,7 @@ Now evaluate these answers:
         return extract_json(response.json()["choices"][0]["message"]["content"]).strip()
     except Exception as e:
         return f"❌ Error: {str(e)}\n\n{response.text}"
+
 
 
 

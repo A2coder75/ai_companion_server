@@ -17,7 +17,10 @@ print("App starts")
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://preview--class-10-ai-mentor.lovable.app",
+        "https://class-10-ai-mentor.lovable.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -231,6 +234,7 @@ def generate_planner(req: PlannerRequest):
 @app.get("/health")
 def health_check():
     return JSONResponse(content={"status": "ok"})
+
 
 
 

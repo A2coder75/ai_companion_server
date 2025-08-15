@@ -47,9 +47,15 @@ class PlannerRequest(BaseModel):
 class QuestionsRequest(BaseModel):
     filename: str
 
-class AnswerItem(BaseModel):
-    question_id: str
-    answer: str
+class QuestionItem(BaseModel):
+    question_number: str
+    type: str
+    marks: int
+    correct_answer: str
+    user_answer: str
+
+class GradeRequest(BaseModel):
+    questions: List[QuestionItem]
 
 # ============================
 # Routes
@@ -74,7 +80,7 @@ def download_pdf(path: str):
 
 # Route: Grade batch
 @app.post("/grade_batch")
-def grade_batch(req: List[AnswerItem]):
+def grade_batch(req: GradeRequest):
     # Convert Pydantic objects to dict for processing
     batch_data = [item.dict() for item in req]
     result_str = evaluate_answer_batch(batch_data)
@@ -115,4 +121,5 @@ def generate_planner(req: PlannerRequest):
 @app.get("/health")
 def health_check():
     return JSONResponse(content={"status": "ok"})
+
 

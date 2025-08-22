@@ -16,7 +16,7 @@ def create_prompt(user_prompt: str, context: List[str]) -> str:
         context_block = "\n".join([f"Previous message: {msg}" for msg in context])
 
     return f"""
-You are an expert ICSE Class 10 Physics doubt explainer.
+You are an expert ICSE doubt explainer.
 
 You must **only** give the final explanation. **Do not add any thinking process, internal reasoning, or notes**. Your answer must start immediately with the explanation.
 Explain the concept in very simple words to clear the concept
@@ -69,3 +69,4 @@ def solve_doubt(user_prompt: str, important: bool = False, context: List[str] = 
     model = DEEPSEEK_MODEL if important else LLAMA_MODEL
     prompt = create_prompt(user_prompt, context)
     return ask_groq_api(prompt, model)
+

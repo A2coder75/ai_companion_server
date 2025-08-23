@@ -192,7 +192,7 @@ def ask_groq_api(
     prompt: str,
     model: str = LLAMA_MODEL,
     temperature: float = 0.2,
-    max_tokens: int = 3500,
+    max_tokens: int = 5000,
 ) -> str:
     if not GROQ_API_KEY:
         raise RuntimeError("GROQ_API_KEY not set in environment.")
@@ -319,5 +319,6 @@ def get_plan(req_dict: Dict[str, Any]) -> Dict[str, Any]:
     # Validate / fix calendar weeks
     fixed = validate_and_fix_calendar_weeks(parsed)
     return fixed
+
 
 

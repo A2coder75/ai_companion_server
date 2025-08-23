@@ -175,6 +175,7 @@ OUTPUT RULES
 - Dates must be chronological and correctly grouped by calendar week_number.
 - Schema must follow exactly: {example_json}
 - Populate the tasks realistically for this student.
+- I NEED THE JSON ONLY. NO TEXT BEFORE OR AFTER THAT. STRICTLY JSON. NO "HERES UR JSON" TEXT. NO. I NEED ONLY AND ONLY THE JSON IN THE RETURN OUPUT. ONLY JSON. NOTHING ELSE
 
 SELF-CHECK BEFORE ANSWERING (MANDATORY)
 - For each week block, compute the Monday and Sunday of every date in the block. They must all be identical Monday–Sunday ranges.
@@ -318,4 +319,5 @@ def get_plan(req_dict: Dict[str, Any]) -> Dict[str, Any]:
     # Validate / fix calendar weeks
     fixed = validate_and_fix_calendar_weeks(parsed)
     return fixed
+
 

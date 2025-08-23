@@ -218,10 +218,12 @@ def ask_groq_api(
 # Post-processing: Validate & Fix Week Grouping
 # ------------------------------
 def _extract_json(text: str) -> str:
-    """Extract the largest JSON object from a text blob."""
-    m = re.search(r"\{[\s\S]*\}$", text)
-    if m:
-        return m.group(0)
+    # Find the first '{' and the last '}' and extract everything in between
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return text[start:end + 1]
+    raise ValueError("No JSON object found in text")
 
     # Fallback: find first '{' and last '}'
     start = text.find("{")
@@ -316,3 +318,4 @@ def get_plan(req_dict: Dict[str, Any]) -> Dict[str, Any]:
     # Validate / fix calendar weeks
     fixed = validate_and_fix_calendar_weeks(parsed)
     return fixed
+

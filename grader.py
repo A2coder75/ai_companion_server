@@ -98,7 +98,7 @@ Award **full, partial, or zero marks** depending on how many correct elements ar
   "total_marks_awarded": <sum>,
   "total_marks_possible": {total_possible}
 }}
-
+RETURN THE JSON ONLY. NOTHING ELSE. I REPEAT NOTHING ELSE. NO TEXT LIKE "HERES YOUR JSON". NO. NEVER. ONLY THE JSON. STRICTLY THE JSON. NOT A CHARACTER OUTSIDE OF IT
 Now evaluate these answers:
 {question_blocks}
 """
@@ -121,3 +121,4 @@ Now evaluate these answers:
         return extract_json(response.json()["choices"][0]["message"]["content"]).strip()
     except Exception as e:
         return f"❌ Error: {str(e)}\n\n{response.text}"
+

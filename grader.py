@@ -121,7 +121,7 @@ Now evaluate these answers:
         "model": GROQ_MODEL,
         "messages": [{"role": "user", "content": full_prompt}],
         "temperature": 0.2,
-        "max_tokens": 2048
+        "max_tokens": 5000
     }
 
     try:
@@ -130,5 +130,6 @@ Now evaluate these answers:
         return extract_json(response.json()["choices"][0]["message"]["content"]).strip()
     except Exception as e:
         return f"❌ Error: {str(e)}\n\n{response.text}"
+
 
 

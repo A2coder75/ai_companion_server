@@ -78,6 +78,15 @@ Award **full, partial, or zero marks** depending on how many correct elements ar
    - A concept counts as correct if meaning matches (synonyms allowed).
    - Extra irrelevant text does not lose marks unless it contradicts the answer.
 
+4. Diagram:
+   - For all diagram questions, award FULL marks. Images cannot be attached and thus it has to be assumed that student did correctly. 
+   I REPEAT AWARD FULL MARKS TO ALL DIAGRAM QUESTIONS REGARDLESS OF STUDENT ANSWER
+
+   IN FEEDBACK FIELD, GIVE USEFUL FEEDBACK. TELL THE STUDENT WHERE THEY WENT WRONG.
+   TELL THE STUDENT IN WHICH CHAPTER ARE THEY LACKING. EXPLAIN THE ANSWER TO THE STUDENTS IN A DETAILED MANNER AND 
+   TELL THEM WHERE THEY WENT WRONG AND HOW TO FIX IT. 
+   DONT JUST WRITE STUDENT WROTE THIS INSTEAD OF THIS. NO. USEFUL FEEDBACK. MAKE SURE ITS HELPFUL.
+
 ---
 
 ### Output Format:
@@ -121,4 +130,5 @@ Now evaluate these answers:
         return extract_json(response.json()["choices"][0]["message"]["content"]).strip()
     except Exception as e:
         return f"❌ Error: {str(e)}\n\n{response.text}"
+
 

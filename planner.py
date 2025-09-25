@@ -30,7 +30,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-LLAMA_MODEL = os.getenv("LLAMA_MODEL", "llama3-8b-8192")
+LLAMA_MODEL = os.getenv("LLAMA_MODEL", "llama-3.1-8b-instant")
 GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
 
 
@@ -319,6 +319,7 @@ def get_plan(req_dict: Dict[str, Any]) -> Dict[str, Any]:
     # Validate / fix calendar weeks
     fixed = validate_and_fix_calendar_weeks(parsed)
     return fixed
+
 
 
 

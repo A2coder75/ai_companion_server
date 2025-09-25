@@ -15,10 +15,14 @@ app = FastAPI()
 print("App starts")
 
 # Enable CORS
+origins = [
+    "https://studia-ai.vercel.app",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://studia-ai.vercel.app"],  # your frontend
-    allow_credentials=True,
+    allow_origins=origins,
+    allow_credentials=False,  # keep False if no cookies
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -111,4 +115,5 @@ def generate_planner(req: PlannerRequest):
 @app.get("/health")
 def health_check():
     return JSONResponse(content={"status": "ok"})
+
 

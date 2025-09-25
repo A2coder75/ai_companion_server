@@ -54,7 +54,7 @@ def ask_groq_api(prompt: str, model: str) -> dict:
         return {
             "model": model,
             "answer": data["choices"][0]["message"]["content"].strip(),
-            "tokens_used": data["usage"]["total_tokens"]
+            "tokens_used": data.get("usage", {}).get("total_tokens", 0)
         }
 
     except Exception as e:
@@ -69,4 +69,5 @@ def solve_doubt(user_prompt: str, important: bool = False, context: List[str] = 
     model = DEEPSEEK_MODEL if important else LLAMA_MODEL
     prompt = create_prompt(user_prompt, context)
     return ask_groq_api(prompt, model)
+
 

@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # Load env vars
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = "llama3-8b-8192"
+GROQ_MODEL = "llama-3.1-8b-instant"
 
 def extract_json(text):
     match = re.search(r"\{[\s\S]*\}", text)
@@ -130,6 +130,7 @@ Now evaluate these answers:
         return extract_json(response.json()["choices"][0]["message"]["content"]).strip()
     except Exception as e:
         return f"❌ Error: {str(e)}\n\n{response.text}"
+
 
 
 

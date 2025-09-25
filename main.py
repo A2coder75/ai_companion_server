@@ -17,11 +17,10 @@ print("App starts")
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # you can replace with your frontend domain if needed
+    allow_origins=["https://studia-ai.vercel.app"],  # your frontend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
 )
 
 # ============================
@@ -112,3 +111,4 @@ def generate_planner(req: PlannerRequest):
 @app.get("/health")
 def health_check():
     return JSONResponse(content={"status": "ok"})
+

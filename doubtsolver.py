@@ -6,7 +6,7 @@ import os
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # ✅ Replace with models actually available to your account
-LLAMA_MODEL = "llama3-8b-8192"
+LLAMA_MODEL = "llama-3.1-8b-instant"
 DEEPSEEK_MODEL = "deepseek-r1-distill-llama-70b"
 
 
@@ -89,3 +89,4 @@ def solve_doubt(user_prompt: str, important: bool = False, context: List[str] = 
 if __name__ == "__main__":
     resp = solve_doubt("What is photosynthesis?")
     print(resp)
+
